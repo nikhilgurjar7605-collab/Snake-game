@@ -1,0 +1,120 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [
+    ".env",
+    ".env.local",
+    ".env.production"
+  ],
+  "globalEnv": [
+    "NODE_ENV",
+    "DATABASE_URL",
+    "TELEGRAM_BOT_TOKEN",
+    "TELEGRAM_WEBHOOK_URL",
+    "REDIS_URL",
+    "JWT_SECRET",
+    "CORS_ORIGIN",
+    "PORT"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "src/**",
+        "public/**",
+        "index.html",
+        "vite.config.*",
+        "tsconfig*.json",
+        "tailwind.config.*",
+        "package.json"
+      ],
+      "outputs": [
+        "dist/**",
+        ".next/**",
+        "!.next/cache/**"
+      ],
+      "outputLogs": "new-only"
+    },
+    "dev": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true,
+      "outputLogs": "new-only"
+    },
+    "lint": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "src/**",
+        ".eslintrc*",
+        "eslint.config.*",
+        "package.json"
+      ],
+      "outputs": [],
+      "outputLogs": "new-only"
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "src/**",
+        "tsconfig*.json",
+        "package.json"
+      ],
+      "outputs": [],
+      "outputLogs": "new-only"
+    },
+    "clean": {
+      "cache": false
+    },
+    "db:generate": {
+      "inputs": [
+        "prisma/schema.prisma"
+      ],
+      "outputs": [
+        "node_modules/.prisma/**",
+        "src/generated/**"
+      ],
+      "outputLogs": "new-only"
+    },
+    "db:push": {
+      "inputs": [
+        "prisma/schema.prisma"
+      ],
+      "cache": false,
+      "outputLogs": "new-only"
+    },
+    "db:migrate": {
+      "inputs": [
+        "prisma/schema.prisma",
+        "prisma/migrations/**"
+      ],
+      "cache": false,
+      "outputLogs": "new-only"
+    },
+    "db:studio": {
+      "cache": false,
+      "persistent": true,
+      "outputLogs": "new-only"
+    },
+    "db:seed": {
+      "inputs": [
+        "prisma/seed.ts",
+        "prisma/schema.prisma"
+      ],
+      "cache": false,
+      "outputLogs": "new-only"
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "src/**",
+        "tests/**",
+        "__tests__/**",
+        "*.test.*",
+        "*.spec.*"
+      ],
+      "outputs": [
+        "coverage/**"
+      ],
+      "outputLogs": "new-only"
+    }
+  }
+}

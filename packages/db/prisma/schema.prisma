@@ -1,0 +1,524 @@
+// ============================================================================
+// Snake Arena — Database Schema
+// Package: @snake-arena/db
+// Database: PostgreSQL
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum SkinRarity {
+  COMMON
+  RARE
+  EPIC
+  LEGENDARY
+  MYTHIC
+}
+
+enum SkinPattern {
+  SOLID
+  STRIPED
+  DOTTED
+  GRADIENT
+  NEON
+  GALAXY
+  FIRE
+  ICE
+}
+
+enum Currency {
+  COINS
+  GEMS
+  PREMIUM
+}
+
+enum QuestType {
+  KILL
+  SCORE
+  LENGTH
+  SURVIVE
+  COLLECT
+  WIN_STREAK
+  BOOST_DISTANCE
+}
+
+enum QuestCategory {
+  DAILY
+  WEEKLY
+  ACHIEVEMENT
+  EVENT
+}
+
+enum QuestStatus {
+  LOCKED
+  ACTIVE
+  COMPLETED
+  CLAIMED
+  EXPIRED
+}
+
+enum GameStatus {
+  WAITING
+  COUNTDOWN
+  IN_PROGRESS
+  PAUSED
+  FINISHED
+}
+
+enum DeathCause {
+  SELF_COLLISION
+  WALL_COLLISION
+  SNAKE_COLLISION
+  HEAD_ON
+  TIMEOUT
+}
+
+enum PurchaseStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum TransactionType {
+  PURCHASE
+  REWARD
+  DAILY_BONUS
+  REFERRAL
+  QUEST_REWARD
+  ADMIN_GRANT
+}
+
+// ============================================================================
+// USERS
+// ============================================================================
+
+model User {
+  id              String    @id @default(cuid())
+  telegramId      BigInt    @unique @map("telegram_id")
+  username        String    @db.VarChar(64)
+  displayName     String    @default("") @map("display_name") @db.VarChar(128)
+  firstName       String    @default("") @map("first_name") @db.VarChar(64)
+  lastName        String?   @map("last_name") @db.VarChar(64)
+  avatarUrl       String?   @map("avatar_url") @db.VarChar(512)
+  languageCode    String    @default("en") @map("language_code") @db.VarChar(8)
+  isPremium       Boolean   @default(false) @map("is_premium")
+  isBot           Boolean   @default(false) @map("is_bot")
+  isBanned        Boolean   @default(false) @map("is_banned")
+  banReason       String?   @map("ban_reason") @db.VarChar(512)
+  bannedAt        DateTime? @map("banned_at")
+
+  // Currency
+  coins           Int       @default(500)
+  gems            Int       @default(10)
+  premiumCurrency Int       @default(0) @map("premium_currency")
+
+  // Progression
+  level           Int       @default(1)
+  xp              Int       @default(0)
+  totalXpEarned   Int       @default(0) @map("total_xp_earned")
+
+  // Active selections
+  activeSkinId    String    @map("active_skin_id")
+  activeSkin      Skin      @relation("ActiveSkin", fields: [activeSkinId], references: [id])
+
+  // Stats
+  totalGames      Int       @default(0) @map("total_games")
+  totalWins       Int       @default(0) @map("total_wins")
+  totalKills      Int       @default(0) @map("total_kills")
+  totalDeaths     Int       @default(0) @map("total_deaths")
+  highestScore    Int       @default(0) @map("highest_score")
+  longestSnake    Int       @default(0) @map("longest_snake")
+  longestSurvival Int       @default(0) @map("longest_survival")
+  totalPlayTime   Int       @default(0) @map("total_play_time")
+
+  // Referral
+  referredBy      String?   @map("referred_by")
+  referralCode    String    @unique @default(cuid()) @map("referral_code") @db.VarChar(32)
+  referralCount   Int       @default(0) @map("referral_count")
+
+  // Timestamps
+  lastLoginAt     DateTime? @map("last_login_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  inventory       InventoryItem[]
+  questProgress   QuestProgress[]
+  purchases       Purchase[]
+  transactions    Transaction[]
+  gameSessions    GameSession[]
+  achievements    UserAchievement[]
+  dailyBonuses    DailyBonus[]
+  referrals       User[]    @relation("Referrals")
+  referrer        User?     @relation("Referrals", fields: [referredBy], references: [id])
+
+  @@index([username])
+  @@index([level])
+  @@index([highestScore])
+  @@index([createdAt])
+  @@map("users")
+}
+
+// ============================================================================
+// SKINS
+// ============================================================================
+
+model Skin {
+  id              String      @id @default(cuid())
+  name            String      @db.VarChar(64)
+  slug            String      @unique @db.VarChar(64)
+  description     String      @db.VarChar(512)
+  rarity          SkinRarity  @default(COMMON)
+  pattern         SkinPattern @default(SOLID)
+
+  // Colors
+  primaryColor    String      @map("primary_color") @db.VarChar(7)
+  secondaryColor  String      @map("secondary_color") @db.VarChar(7)
+  headColor       String      @map("head_color") @db.VarChar(7)
+  eyeColor        String      @default("#ffffff") @map("eye_color") @db.VarChar(7)
+  outlineColor    String      @default("#000000") @map("outline_color") @db.VarChar(7)
+  glowColor       String      @default("") @map("glow_color") @db.VarChar(7)
+
+  // Effects
+  particleEffect  String?     @map("particle_effect") @db.VarChar(64)
+  trailEffect     String?     @map("trail_effect") @db.VarChar(64)
+  deathEffect     String?     @map("death_effect") @db.VarChar(64)
+
+  // Pricing
+  price           Int         @default(0)
+  currency        Currency    @default(COINS)
+  isPremium       Boolean     @default(false) @map("is_premium")
+  isLimited       Boolean     @default(false) @map("is_limited")
+  limitedUntil    DateTime?   @map("limited_until")
+
+  // Unlock requirements
+  unlockLevel     Int         @default(1) @map("unlock_level")
+  unlockCondition String?     @map("unlock_condition") @db.VarChar(256)
+  isFree          Boolean     @default(false) @map("is_free")
+
+  // Display
+  sortOrder       Int         @default(0) @map("sort_order")
+  isActive        Boolean     @default(true) @map("is_active")
+  previewUrl      String?     @map("preview_url") @db.VarChar(512)
+
+  // Timestamps
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  usersWithActive Skin[]      @relation("ActiveSkin")
+  inventoryItems  InventoryItem[]
+
+  @@index([rarity])
+  @@index([isActive, sortOrder])
+  @@index([unlockLevel])
+  @@map("skins")
+}
+
+// ============================================================================
+// INVENTORY
+// ============================================================================
+
+model InventoryItem {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  skinId      String   @map("skin_id")
+  acquiredAt  DateTime @default(now()) @map("acquired_at")
+  acquiredVia String   @default("PURCHASE") @map("acquired_via") @db.VarChar(32)
+  sourceId    String?  @map("source_id") @db.VarChar(128)
+  isFavorite  Boolean  @default(false) @map("is_favorite")
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skin        Skin     @relation(fields: [skinId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, skinId])
+  @@index([userId])
+  @@index([skinId])
+  @@map("inventory_items")
+}
+
+// ============================================================================
+// QUESTS
+// ============================================================================
+
+model Quest {
+  id            String        @id @default(cuid())
+  title         String        @db.VarChar(128)
+  description   String        @db.VarChar(512)
+  type          QuestType
+  category      QuestCategory @default(DAILY)
+  target        Int
+  isActive      Boolean       @default(true) @map("is_active")
+  isRepeatable  Boolean       @default(false) @map("is_repeatable")
+
+  // Rewards
+  rewardCoins   Int           @default(0) @map("reward_coins")
+  rewardGems    Int           @default(0) @map("reward_gems")
+  rewardXp      Int           @default(0) @map("reward_xp")
+  rewardSkinId  String?       @map("reward_skin_id")
+
+  // Scheduling
+  availableFrom DateTime?     @map("available_from")
+  availableUntil DateTime?    @map("available_until")
+  resetInterval String?       @map("reset_interval") @db.VarChar(32)
+
+  // Display
+  sortOrder     Int           @default(0) @map("sort_order")
+  icon          String        @default("🎯") @db.VarChar(8)
+
+  // Timestamps
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  progress      QuestProgress[]
+  rewardSkin    Skin?         @relation(fields: [rewardSkinId], references: [id])
+
+  @@index([category, isActive])
+  @@index([type])
+  @@map("quests")
+}
+
+model QuestProgress {
+  id          String      @id @default(cuid())
+  userId      String      @map("user_id")
+  questId     String      @map("quest_id")
+  progress    Int         @default(0)
+  status      QuestStatus @default(ACTIVE)
+  startedAt   DateTime    @default(now()) @map("started_at")
+  completedAt DateTime?   @map("completed_at")
+  claimedAt   DateTime?   @map("claimed_at")
+  expiresAt   DateTime?   @map("expires_at")
+
+  // Relations
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quest       Quest       @relation(fields: [questId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questId])
+  @@index([userId, status])
+  @@index([questId])
+  @@index([expiresAt])
+  @@map("quest_progress")
+}
+
+// ============================================================================
+// PURCHASES & TRANSACTIONS
+// ============================================================================
+
+model Purchase {
+  id              String         @id @default(cuid())
+  userId          String         @map("user_id")
+  skinId          String?        @map("skin_id")
+  itemType        String         @map("item_type") @db.VarChar(32)
+  itemId          String?        @map("item_id") @db.VarChar(128)
+  amount          Int
+  currency        Currency
+  status          PurchaseStatus @default(PENDING)
+  telegramPaymentId String?      @map("telegram_payment_id") @db.VarChar(128)
+  externalTxId    String?        @map("external_tx_id") @db.VarChar(256)
+  metadata        Json?
+  purchasedAt     DateTime       @default(now()) @map("purchased_at")
+  completedAt     DateTime?      @map("completed_at")
+  refundedAt      DateTime?      @map("refunded_at")
+
+  // Relations
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([purchasedAt])
+  @@index([telegramPaymentId])
+  @@map("purchases")
+}
+
+model Transaction {
+  id              String          @id @default(cuid())
+  userId          String          @map("user_id")
+  type            TransactionType
+  amount          Int
+  currency        Currency
+  balanceBefore   Int             @map("balance_before")
+  balanceAfter    Int             @map("balance_after")
+  referenceType   String?         @map("reference_type") @db.VarChar(32)
+  referenceId     String?         @map("reference_id") @db.VarChar(128)
+  description     String          @default("") @db.VarChar(256)
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  // Relations
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([type])
+  @@index([referenceType, referenceId])
+  @@map("transactions")
+}
+
+// ============================================================================
+// GAME SESSIONS
+// ============================================================================
+
+model GameSession {
+  id              String     @id @default(cuid())
+  roomName        String     @map("room_name") @db.VarChar(64)
+  status          GameStatus @default(WAITING)
+  config          Json
+  gridWidth       Int        @map("grid_width")
+  gridHeight      Int        @map("grid_height")
+  maxPlayers      Int        @map("max_players")
+  playerCount     Int        @default(0) @map("player_count")
+  startedAt       DateTime?  @map("started_at")
+  endedAt         DateTime?  @map("ended_at")
+  winnerId        String?    @map("winner_id")
+  duration        Int        @default(0)
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  participants    GameParticipant[]
+
+  @@index([status])
+  @@index([roomName])
+  @@index([startedAt])
+  @@map("game_sessions")
+}
+
+model GameParticipant {
+  id              String      @id @default(cuid())
+  sessionId       String      @map("session_id")
+  userId          String      @map("user_id")
+  finalScore      Int         @default(0) @map("final_score")
+  finalLength     Int         @default(0) @map("final_length")
+  kills           Int         @default(0)
+  deaths          Int         @default(0)
+  rank            Int         @default(0)
+  deathCause      DeathCause? @map("death_cause")
+  killedBy        String?     @map("killed_by")
+  survivalTime    Int         @default(0) @map("survival_time")
+  coinsEarned     Int         @default(0) @map("coins_earned")
+  xpEarned        Int         @default(0) @map("xp_earned")
+  joinedAt        DateTime    @default(now()) @map("joined_at")
+  leftAt          DateTime?   @map("left_at")
+
+  // Relations
+  session         GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([rank])
+  @@map("game_participants")
+}
+
+// ============================================================================
+// ACHIEVEMENTS
+// ============================================================================
+
+model Achievement {
+  id            String   @id @default(cuid())
+  name          String   @db.VarChar(128)
+  description   String   @db.VarChar(512)
+  icon          String   @default("🏆") @db.VarChar(8)
+  category      String   @db.VarChar(32)
+  requirement   String   @db.VarChar(256)
+  targetValue   Int      @map("target_value")
+  rewardCoins   Int      @default(0) @map("reward_coins")
+  rewardGems    Int      @default(0) @map("reward_gems")
+  rewardXp      Int      @default(0) @map("reward_xp")
+  isActive      Boolean  @default(true) @map("is_active")
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Relations
+  users         UserAchievement[]
+
+  @@index([category, isActive])
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  achievementId String   @map("achievement_id")
+  progress      Int      @default(0)
+  isCompleted   Boolean  @default(false) @map("is_completed")
+  completedAt   DateTime? @map("completed_at")
+  claimedAt     DateTime? @map("claimed_at")
+  unlockedAt    DateTime @default(now()) @map("unlocked_at")
+
+  // Relations
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@index([achievementId])
+  @@map("user_achievements")
+}
+
+// ============================================================================
+// DAILY BONUSES
+// ============================================================================
+
+model DailyBonus {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  day           String   @db.VarChar(10)
+  coinsClaimed  Int      @default(0) @map("coins_claimed")
+  gemsClaimed   Int      @default(0) @map("gems_claimed")
+  xpClaimed     Int      @default(0) @map("xp_claimed")
+  streakDay     Int      @default(1) @map("streak_day")
+  claimedAt     DateTime @default(now()) @map("claimed_at")
+
+  // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, day])
+  @@index([userId])
+  @@map("daily_bonuses")
+}
+
+// ============================================================================
+// CONFIGURATION & SETTINGS
+// ============================================================================
+
+model GameConfig {
+  id            String   @id @default(cuid())
+  key           String   @unique @db.VarChar(128)
+  value         Json
+  description   String   @default("") @db.VarChar(512)
+  category      String   @default("general") @db.VarChar(64)
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@map("game_config")
+}
+
+model Announcement {
+  id            String   @id @default(cuid())
+  title         String   @db.VarChar(256)
+  content       String   @db.VarChar(2048)
+  type          String   @default("info") @db.VarChar(32)
+  isActive      Boolean  @default(true) @map("is_active")
+  priority      Int      @default(0)
+  validFrom     DateTime @map("valid_from")
+  validUntil    DateTime @map("valid_until")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive, priority])
+  @@index([validFrom, validUntil])
+  @@map("announcements")
+}

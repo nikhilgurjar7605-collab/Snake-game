@@ -1,11 +1,29 @@
 {
-  "name": "sandbox-workspace",
+  "name": "snake-arena",
   "private": true,
+  "version": "0.1.0",
+  "description": "Snake Arena — A multiplayer .io snake game with Telegram integration",
   "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
-    "dev": "vite",
+    "dev": "turbo run dev",
     "build": "vite build",
-    "typecheck": "tsc --noEmit"
+    "build:all": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit",
+    "typecheck:all": "turbo run typecheck",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "dev:web": "vite",
+    "build:web": "vite build",
+    "preview": "vite preview",
+    "db:generate": "turbo run db:generate",
+    "db:push": "turbo run db:push",
+    "db:migrate": "turbo run db:migrate",
+    "db:studio": "turbo run db:studio",
+    "db:seed": "turbo run db:seed"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",
@@ -20,7 +38,8 @@
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.8.0",
     "recharts": "^2.10.0",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.7",
@@ -30,7 +49,13 @@
     "@types/uuid": "^9.0.7",
     "@vitejs/plugin-react": "^4.3.4",
     "tailwindcss": "^4.1.7",
+    "turbo": "^2.11.7",
     "typescript": "^5.7.0",
     "vite": "^6.3.5"
-  }
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "packageManager": "npm@10.0.0"
 }

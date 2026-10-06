@@ -1,16 +1,43 @@
 {
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Snake Arena — Base Configuration",
   "compilerOptions": {
-    "target": "ES2020",
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "jsx": "react-jsx",
     "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "allowJs": false,
+    "jsx": "react-jsx",
     "strict": true,
-    "skipLibCheck": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
     "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": false,
+    "incremental": true,
     "noEmit": true,
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "@snake-arena/shared-types": ["./packages/shared-types/src/index.ts"],
+      "@snake-arena/shared-types/*": ["./packages/shared-types/src/*"],
+      "@/*": ["./src/*"]
+    }
   },
-  "include": ["src"]
+  "include": [
+    "src",
+    "packages/shared-types/src"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    ".turbo"
+  ]
 }
